@@ -1,4 +1,7 @@
-import { LitElement, html } from '@polymer/lit-element'; 
+import { LitElement, html } from '@polymer/lit-element';
+import { connect } from 'pwa-helpers';
+import { store } from '../redux/store.js';
+import { VISIBILITY_FILTERS } from '../redux/reducer';
 
 import '@vaadin/vaadin-text-field';
 import '@vaadin/vaadin-button';
@@ -6,13 +9,14 @@ import '@vaadin/vaadin-checkbox';
 import '@vaadin/vaadin-radio-button/vaadin-radio-button';
 import '@vaadin/vaadin-radio-button/vaadin-radio-group';
 
-const VISIBILITY_FILTERS = {
-  SHOW_ALL: 'All',
-  SHOW_ACTIVE: 'Active',
-  SHOW_COMPLETED: 'Completed'
-};
+import {
+  addTodo,
+  updateTodoStatus,
+  updateFilter,
+  clearCompleted
+} from '../redux/actions.js';
 
-class TodoView extends LitElement {
+class TodoView extends connect(store)(LitElement) {
   static get properties() {
     return {
       todos: { type: Array },
@@ -23,9 +27,11 @@ class TodoView extends LitElement {
 
   constructor() {
     super();
-    this.todos = [];
-    this.filter = VISIBILITY_FILTERS.SHOW_ALL;
-    this.task = '';
+  }
+
+  stateChanged(state) {
+    this.todos = state.todos;
+    this.filter = state.filter;
   }
 
   render() {
@@ -56,7 +62,7 @@ class TodoView extends LitElement {
   
         <vaadin-text-field
           placeholder="Task"
-          value="${this.task}" 
+          value="${this.task || ''}" 
           @change="${this.updateTask}"> 
         </vaadin-text-field>
   
@@ -103,11 +109,8 @@ class TodoView extends LitElement {
 
   addTodo() {
     if (this.task) {
-      this.todos = [...this.todos, { 
-          task: this.task,
-          complete: false
-      }];
-      this.task = ''; 
+      store.dispatch(addTodo(this.task));
+      this.task = '';
     }
   }
 
@@ -122,8 +125,8 @@ class TodoView extends LitElement {
     }
   }
 
-  clearCompleted() { 
-    this.todos = this.todos.filter(todo => !todo.complete);
+  clearCompleted() {
+    store.dispatch(clearCompleted());
   }
 
   createRenderRoot() {
@@ -131,7 +134,7 @@ class TodoView extends LitElement {
   }
 
   filterChanged(e) { 
-    this.filter = e.target.value;
+    store.dispatch(updateFilter(e.detail.value));
   }
 
   shortcutListener(e) {
@@ -145,9 +148,7 @@ class TodoView extends LitElement {
   }
 
   updateTodoStatus(updatedTodo, complete) {
-    this.todos = this.todos.map(todo =>
-      updatedTodo === todo ? { ...updatedTodo, complete } : todo
-    );
+    store.dispatch(updateTodoStatus(updatedTodo, complete));
   }
 }
 
